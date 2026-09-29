@@ -1,10 +1,10 @@
-# LSTM Direction — Predicting Market Direction, and Showing It Can't Be Done
+# LSTM Direction: Can an LSTM predict the market direction?
 
-An LSTM model that predicts the daily direction (up/down) of the S&P 500 index (SPY), built with one central concern: eliminating every form of data leakage that makes a tutorial-style LSTM look deceptively good. The goal was not to get an impressive number, but to build a test honest enough to trust the result, even when that result is negative.
+In this project I trained an LSTM to predict whether the S&P 500 (SPY) goes up or down the next day. Most LSTM tutorials show great results because of data leakage, so I spent most of my time making sure my test was honest. I wanted a result I could actually trust, even if it was a bad one.
 
 ## Result
 
-**The LSTM does not beat trivial baselines.** It finished 6 percentage points below the best baseline:
+The LSTM did not beat simple baselines. It ended 6 percentage points below the best one.
 
 ```
 Strategy                Accuracy (out-of-sample)
@@ -16,27 +16,22 @@ Persistence baseline        0.5196   (tomorrow = today's direction)
 LSTM edge:                  -6.0 p.p.
 ```
 
-More telling than the accuracy itself: the training loss plateaued at ~0.693, which is exactly `ln(2)`, the binary cross-entropy of pure chance predictions. No matter how long it trained, the model never found any predictive structure. This is not a bug; it is the mathematical signature of a signal that does not exist.
+Something I found interesting is that the training loss got stuck at about 0.693. That is ln(2), which is the binary cross-entropy you get when you just guess randomly. So the model never learned anything useful, however long I trained it.
 
-This is the correct and expected result. The daily direction of a liquid, efficient index is essentially unpredictable from its own price and volume history. The value of this project is not the final number, but the leakage-proof methodology that makes it possible to state this with confidence, instead of reporting an accuracy inflated by a silent error.
+I think this makes sense. The daily direction of a big, liquid index is very hard to predict using only its own past prices and volume. For me the important part of the project is not the accuracy, it is that I can say this with confidence because I avoided the usual mistakes.
 
-## Leakage-proof methodology
+## How I avoided data leakage
 
-What sets this project apart from a tutorial LSTM is the set of decisions that eliminate lookahead bias, the error that makes a model appear to predict the future when it is actually seeing it:
+- **Split first, scale after.** I fit the `StandardScaler` only on the training data and then applied it to the test data. If you scale the whole dataset before splitting, the model indirectly sees information from the future.
+- **Stationary features.** I only used returns and things calculated from returns (momentum, volatility, volume change). I did not use raw prices, because a model that predicts price just copies yesterday's value and looks great for no real reason.
+- **Predicting direction, not price.** The target is simply whether tomorrow's return is positive or not.
+- **Baselines.** An accuracy number alone doesn't mean much, so I compared the LSTM with two simple rules: always predict the most common class, and assume tomorrow moves like today. A model is only useful if it beats both, and mine didn't.
+- **Sequences built correctly.** Each window only uses data up to day `t` to predict day `t+1`. I built the sequences separately for train and test so nothing mixes between them. The validation set is the last part of the training data, so it always comes after the data used to train.
 
-- **Temporal split before scaling.** The `StandardScaler` is fitted only on the training set; the test set is transformed using the training parameters. The classic mistake of scaling the whole series before splitting lets the model "see" statistics from the future through the normalisation. Here, that does not happen.
-- **Stationary features.** All features are returns or return-derived (momentum, volatility, volume change), never price levels. Predicting the price level makes the model copy the last value ("tomorrow = today") and show spectacular but completely useless metrics.
-- **Direction target, not level target.** Honest binary classification: is tomorrow's return positive or not? This avoids the "predict the price" trap, which disguises persistence as predictive ability.
-- **Mandatory baselines.** An accuracy figure on its own is uninterpretable. The model is compared against two trivial references: always predicting the majority class, and persistence (tomorrow follows today's direction). A model is only worth something if it beats both, and this one does not.
-- **Causal sequence construction.** Each window uses only data up to day `t` to predict `t+1`, and sequences are built within each set (train/test) separately, with no contamination between them. Validation uses the temporal tail of the training set, keeping it strictly later than the training data.
+## Tools
 
-## Stack
-
-Python, TensorFlow/Keras (LSTM), scikit-learn, yfinance, NumPy/pandas, matplotlib.
+Python, TensorFlow/Keras, scikit-learn, yfinance, NumPy, pandas, matplotlib.
 
 ## How to run
 
-```
-pip install -r requirements.txt
-python lstm_direction.py
-```
+Open the notebook in Google Colab and click Runtime → Run all.
