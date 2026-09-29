@@ -1,37 +1,42 @@
-# LSTM Direction: Can an LSTM predict the market direction?
+# Predicting SPY's daily direction with an LSTM
 
-In this project I trained an LSTM to predict whether the S&P 500 (SPY) goes up or down the next day. Most LSTM tutorials show great results because of data leakage, so I spent most of my time making sure my test was honest. I wanted a result I could actually trust, even if it was a bad one.
+I wanted to see if an LSTM could predict whether SPY goes up or down the
+next day. My main focus was doing it without data leakage and comparing
+the model against simple baselines, so I could trust the result even if
+it was bad.
 
-## Result
+It was bad. The LSTM got 47.9% accuracy on the test set, while just
+predicting "up" every day got 56.3%.
 
-The LSTM did not beat simple baselines. It ended 6 percentage points below the best one.
+| Model                          | Test accuracy |
+|--------------------------------|---------------|
+| LSTM                           | 47.9%         |
+| Always predict "up"            | 56.3%         |
+| Persistence (tomorrow = today) | 51.7%         |
 
-```
-Strategy                Accuracy (out-of-sample)
---------------------------------------------------
-LSTM                        0.5144
-Majority baseline           0.5744   (always predict "up")
-Persistence baseline        0.5196   (tomorrow = today's direction)
---------------------------------------------------
-LSTM edge:                  -6.0 p.p.
-```
+<img width="2038" height="528" alt="results" src="https://github.com/user-attachments/assets/dacff24e-9495-4ed0-9272-371c03626f97" />
 
-Something I found interesting is that the training loss got stuck at about 0.693. That is ln(2), which is the binary cross-entropy you get when you just guess randomly. So the model never learned anything useful, however long I trained it.
+The validation accuracy stays around 50% for the whole training, so the
+model never really learned anything useful.
 
-I think this makes sense. The daily direction of a big, liquid index is very hard to predict using only its own past prices and volume. For me the important part of the project is not the accuracy, it is that I can say this with confidence because I avoided the usual mistakes.
+## What I did to avoid leakage
 
-## How I avoided data leakage
+- Used returns, volatility and volume changes instead of raw prices
+- Split train/test by date first (80/20), and only then fitted the scaler,
+  on the training data only
+- Built the 60-day windows separately inside train and test, so no window
+  crosses the split
+- Used the end of the training period as validation, without shuffling
 
-- **Split first, scale after.** I fit the `StandardScaler` only on the training data and then applied it to the test data. If you scale the whole dataset before splitting, the model indirectly sees information from the future.
-- **Stationary features.** I only used returns and things calculated from returns (momentum, volatility, volume change). I did not use raw prices, because a model that predicts price just copies yesterday's value and looks great for no real reason.
-- **Predicting direction, not price.** The target is simply whether tomorrow's return is positive or not.
-- **Baselines.** An accuracy number alone doesn't mean much, so I compared the LSTM with two simple rules: always predict the most common class, and assume tomorrow moves like today. A model is only useful if it beats both, and mine didn't.
-- **Sequences built correctly.** Each window only uses data up to day `t` to predict day `t+1`. I built the sequences separately for train and test so nothing mixes between them. The validation set is the last part of the training data, so it always comes after the data used to train.
+## Why it lost to "always up"
 
-## Tools
+I used balanced class weights, which probably made the model predict
+"down" too often. The test period (roughly 2023 to 2026) was mostly a
+rising market, so those "down" predictions were costly.
 
-Python, TensorFlow/Keras, scikit-learn, yfinance, NumPy, pandas, matplotlib.
+## Limitations
 
-## How to run
+Single train/test split, single seed, and the data goes up to the day you
+run it, so the numbers change slightly each run.
 
-Open the notebook in Google Colab and click Runtime → Run all.
+
