@@ -1,23 +1,7 @@
-# =============================================================================
-# LSTM to predict market DIRECTION (up/down) - leakage-free version
-# -----------------------------------------------------------------------------
-# What this version fixes compared to a typical tutorial LSTM:
-#   1. TEMPORAL SPLIT BEFORE SCALING. The scaler is fitted only on the training
-#      set. The test set is transformed with that same scaler. Without this,
-#      the model "sees" the future through the normalisation (lookahead bias).
-#   2. STATIONARY FEATURES. I use returns, not price levels. Predicting the
-#      price level makes the model copy the last value ("tomorrow = today"),
-#      which gives nice-looking but useless metrics.
-#   3. TARGET = DIRECTION, not level. Binary classification: is tomorrow's
-#      return positive (1) or not (0)?
-#   4. MANDATORY BASELINES. A model is only worth something if it beats
-#      (a) always predicting the majority class and (b) persistence
-#      (tomorrow = today's direction). Without a baseline, an accuracy
-#      number is impossible to interpret.
-#
-# How to run: in Google Colab, click Runtime -> Run all
-#             (or locally: pip install -r requirements.txt && python lstm_direction.py)
-# =============================================================================
+# LSTM to predict the daily direction (up/down) of the S&P 500 (SPY).
+# Main goal: avoid data leakage and compare against simple baselines, so the
+# result can be trusted even if it is a bad one.
+# Run it in Google Colab (Runtime -> Run all).
 
 import numpy as np
 import pandas as pd
